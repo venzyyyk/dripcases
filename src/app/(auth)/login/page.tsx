@@ -1,4 +1,5 @@
 "use client";
+import { Suspense } from 'react'
 
 import { signIn } from "next-auth/react";
 import Link from "next/link";
