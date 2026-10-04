@@ -1,0 +1,9 @@
+node_modules/
+.next/
+.env
+*.tsbuildinfo
+next-env.d.ts
+
+# Загруженные рендеры — в репу не идут
+/public/uploads/**/*
+!/public/uploads/**/.gitkeep

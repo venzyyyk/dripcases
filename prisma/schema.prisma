@@ -1,0 +1,162 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+  url      = env("DATABASE_URL")
+}
+
+enum Role {
+  USER
+  ADMIN
+}
+
+enum OrderStatus {
+  ITEM_WON
+  AWAITING_CLAIM
+  PROCESSING
+  SHIPPED
+  IN_DELIVERY
+  DELIVERED
+  CANCELLED
+}
+
+enum TransactionType {
+  DEPOSIT
+  CASE_OPEN
+  REFUND
+}
+
+enum TransactionStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+model User {
+  id             String        @id @default(cuid())
+  email          String        @unique
+  passwordHash   String
+  name           String?
+  phone          String?
+  avatar         String?
+  role           Role          @default(USER)
+  balance        Int           @default(0) // в копейках/центах
+  isBlocked      Boolean       @default(false)
+  createdAt      DateTime      @default(now())
+  updatedAt      DateTime      @updatedAt
+
+  caseOpenings   CaseOpening[]
+  orders         Order[]
+  transactions   Transaction[]
+
+  @@map("users")
+}
+
+model Case {
+  id          String     @id @default(cuid())
+  name        String
+  slug        String     @unique
+  description String?
+  image       String?
+  price       Int        // в копейках
+  isActive    Boolean    @default(true)
+  sortOrder   Int        @default(0)
+  tag         String?    // "Хит", "Популярный", etc.
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  items       CaseItem[]
+  openings    CaseOpening[]
+
+  @@map("cases")
+}
+
+model Product {
+  id          String     @id @default(cuid())
+  name        String
+  description String?
+  brand       String?
+  images      String[]   // массив URL
+  size        String?
+  color       String?
+  price       Int        // оценочная стоимость в копейках
+  sku         String?    @unique
+  stock       Int        @default(0)
+  isActive    Boolean    @default(true)
+  createdAt   DateTime   @default(now())
+  updatedAt   DateTime   @updatedAt
+
+  caseItems   CaseItem[]
+  openings    CaseOpening[]
+  orders      Order[]
+
+  @@map("products")
+}
+
+model CaseItem {
+  id         String  @id @default(cuid())
+  caseId     String
+  productId  String
+  dropChance Float   // 0.0 - 100.0, процент
+
+  case       Case    @relation(fields: [caseId], references: [id], onDelete: Cascade)
+  product    Product @relation(fields: [productId], references: [id], onDelete: Cascade)
+
+  @@unique([caseId, productId])
+  @@map("case_items")
+}
+
+model CaseOpening {
+  id        String   @id @default(cuid())
+  userId    String
+  caseId    String
+  productId String
+  cost      Int      // сколько списано
+  createdAt DateTime @default(now())
+
+  user      User     @relation(fields: [userId], references: [id])
+  case      Case     @relation(fields: [caseId], references: [id])
+  product   Product  @relation(fields: [productId], references: [id])
+  order     Order?
+
+  @@map("case_openings")
+}
+
+model Order {
+  id             String      @id @default(cuid())
+  userId         String
+  caseOpeningId  String      @unique
+  productId      String
+  status         OrderStatus @default(ITEM_WON)
+  fullName       String?
+  phone          String?
+  city           String?
+  address        String?
+  trackingNumber String?
+  adminNote      String?
+  createdAt      DateTime    @default(now())
+  updatedAt      DateTime    @updatedAt
+
+  user           User        @relation(fields: [userId], references: [id])
+  caseOpening    CaseOpening @relation(fields: [caseOpeningId], references: [id])
+  product        Product     @relation(fields: [productId], references: [id])
+
+  @@map("orders")
+}
+
+model Transaction {
+  id          String            @id @default(cuid())
+  userId      String
+  amount      Int               // положительный = пополнение, отрицательный = списание
+  type        TransactionType
+  status      TransactionStatus @default(COMPLETED)
+  description String?
+  externalId  String?           // для будущей платёжки
+  createdAt   DateTime          @default(now())
+
+  user        User              @relation(fields: [userId], references: [id])
+
+  @@map("transactions")
+}
