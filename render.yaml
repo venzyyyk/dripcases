@@ -9,19 +9,12 @@ services:
   - type: web
     name: dripcases
     runtime: node
-    plan: starter # free усыпляет через 15 мин простоя и НЕ даёт диск
+    plan: free # free усыпляет через 15 мин простоя и НЕ даёт диск
     region: frankfurt
     branch: main
     buildCommand: npm ci && npx prisma generate && npx prisma migrate deploy && npm run build
     startCommand: npm start
     healthCheckPath: /api/health
-
-    # Персистентный диск под загруженные рендеры.
-    # Без него картинки пропадут при первом же редеплое.
-    disk:
-      name: uploads
-      mountPath: /var/data
-      sizeGB: 1
 
     envVars:
       - key: NODE_VERSION
@@ -37,9 +30,6 @@ services:
 
       - key: NEXTAUTH_URL
         sync: false # вписать вручную: https://dripcases.onrender.com
-
-      - key: UPLOAD_DIR
-        value: /var/data/uploads
 
       - key: NEXT_TELEMETRY_DISABLED
         value: "1"
