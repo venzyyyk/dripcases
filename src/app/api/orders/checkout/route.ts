@@ -4,8 +4,8 @@ import { authOptions } from "@/lib/auth";
 import { prisma } from "@/lib/prisma";
 
 /** Оформление доставки: ровно 3 забранных товара, суммарной оценкой ≥ 3500 ₽. */
-export const CHECKOUT_ITEMS = 3;
-export const CHECKOUT_MIN_KOPECKS = 350000; // 3500 ₽
+const CHECKOUT_ITEMS = 3;
+const CHECKOUT_MIN_KOPECKS = 350000; // 3500 ₽
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
