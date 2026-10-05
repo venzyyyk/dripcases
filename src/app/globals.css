@@ -1364,6 +1364,104 @@
   border-color: #fff;
 }
 
+/* ---------- open setup (count / speed) ---------- */
+.setup {
+  display: flex;
+  flex-direction: column;
+  gap: 22px;
+  max-width: 460px;
+  margin: 0 auto;
+}
+.setup-row {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+.setup-lbl {
+  font-size: 11px;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--t3);
+}
+.chips {
+  display: flex;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 10px 16px;
+  border-radius: 999px;
+  border: 1px solid var(--line2);
+  background: var(--card);
+  color: var(--t2);
+  font-size: 13px;
+  font-weight: 500;
+  transition: 0.2s;
+}
+.chip:hover {
+  color: #fff;
+  border-color: var(--gold);
+}
+.chip.on {
+  background: var(--gold);
+  border-color: var(--gold);
+  color: #000;
+}
+.setup-go {
+  margin-top: 4px;
+  width: 100%;
+  padding: 14px;
+  font-size: 15px;
+}
+
+/* ---------- multi-drop grid ---------- */
+.drop-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(120px, 1fr));
+  gap: 10px;
+  margin-bottom: 20px;
+}
+.drop-cell {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 6px;
+  padding: 12px 8px;
+  border-radius: 10px;
+  border: 1px solid var(--line2);
+  border-top-width: 3px;
+  background: var(--card);
+}
+.drop-cell b {
+  font-size: 11px;
+  font-weight: 500;
+  color: rgba(255, 255, 255, 0.85);
+  text-align: center;
+  line-height: 1.3;
+}
+.drop-cell span {
+  font-size: 11px;
+  font-weight: 600;
+}
+.drop-ic {
+  width: 52px;
+  height: 52px;
+  border-radius: 10px;
+  background: var(--elev);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+.drop-ic img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 /* ---------- reveal on scroll ---------- */
 .rv {
   opacity: 0;

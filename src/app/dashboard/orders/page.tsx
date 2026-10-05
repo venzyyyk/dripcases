@@ -1,10 +1,8 @@
 "use client";
 
 import { useEffect, useState } from "react";
-import { useRouter } from "next/navigation";
 import { formatPrice } from "@/lib/utils";
-import toast from "react-hot-toast";
-import { Package, Truck, Check, Clock } from "lucide-react";
+import { Package, Truck, Check, Clock, ShoppingBag } from "lucide-react";
 import Link from "next/link";
 
 interface Order {
@@ -26,7 +24,9 @@ interface Order {
 }
 
 const STATUS_LABELS: Record<string, string> = {
-  ITEM_WON: "Выпал",
+  ITEM_WON: "Выпал — в инвентаре",
+  KEPT: "Забран — к оформлению",
+  SOLD: "Продан",
   AWAITING_CLAIM: "Ожидает оформления",
   PROCESSING: "В обработке",
   SHIPPED: "Отправлен",
@@ -37,6 +37,7 @@ const STATUS_LABELS: Record<string, string> = {
 
 const STATUS_ICONS: Record<string, typeof Package> = {
   ITEM_WON: Package,
+  KEPT: ShoppingBag,
   AWAITING_CLAIM: Clock,
   PROCESSING: Clock,
   SHIPPED: Truck,
@@ -45,10 +46,8 @@ const STATUS_ICONS: Record<string, typeof Package> = {
 };
 
 export default function OrdersPage() {
-  const router = useRouter();
   const [orders, setOrders] = useState<Order[]>([]);
   const [loading, setLoading] = useState(true);
-  const [claimingId, setClaimingId] = useState<string | null>(null);
 
   useEffect(() => {
     fetch("/api/admin/orders?mine=true")
@@ -59,34 +58,6 @@ export default function OrdersPage() {
       })
       .catch(() => setLoading(false));
   }, []);
-
-  async function handleClaim(e: React.FormEvent<HTMLFormElement>, orderId: string) {
-    e.preventDefault();
-    const formData = new FormData(e.currentTarget);
-
-    const res = await fetch(`/api/admin/orders/${orderId}`, {
-      method: "PATCH",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        status: "AWAITING_CLAIM",
-        fullName: formData.get("fullName"),
-        phone: formData.get("phone"),
-        city: formData.get("city"),
-        address: formData.get("address"),
-      }),
-    });
-
-    if (res.ok) {
-      toast.success("Заказ оформлен");
-      setClaimingId(null);
-      router.refresh();
-      // Refetch
-      const data = await (await fetch("/api/admin/orders?mine=true")).json();
-      setOrders(data.orders || []);
-    } else {
-      toast.error("Ошибка оформления");
-    }
-  }
 
   if (loading) {
     return (
@@ -107,6 +78,14 @@ export default function OrdersPage() {
           <h1 className="font-display font-bold text-xl">Мои заказы</h1>
         </div>
 
+        <p className="text-sm text-text-secondary mb-6">
+          Выпавшие вещи — в{" "}
+          <Link href="/dashboard" className="text-accent hover:text-accent-light">
+            инвентаре
+          </Link>
+          : там можно продать, забрать и оформить доставку (ровно 3 вещи).
+        </p>
+
         {orders.length === 0 ? (
           <div className="rounded-xl border border-border bg-bg-card p-8 text-center">
             <p className="text-text-secondary text-sm mb-4">Нет заказов</p>
@@ -114,92 +93,49 @@ export default function OrdersPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {orders.map((order) => {
-              const Icon = STATUS_ICONS[order.status] || Package;
-              return (
-                <div
-                  key={order.id}
-                  className="rounded-xl border border-border bg-bg-card p-5"
-                >
-                  <div className="flex items-start justify-between mb-3">
-                    <div className="flex items-center gap-3">
-                      <div className="w-10 h-10 rounded-lg bg-bg-elevated flex items-center justify-center">
-                        <Icon className="w-4 h-4 text-accent/60" />
+            {orders
+              .filter((o) => o.status !== "SOLD")
+              .map((order) => {
+                const Icon = STATUS_ICONS[order.status] || Package;
+                return (
+                  <div key={order.id} className="rounded-xl border border-border bg-bg-card p-5">
+                    <div className="flex items-start justify-between mb-2">
+                      <div className="flex items-center gap-3">
+                        <div className="w-10 h-10 rounded-lg bg-bg-elevated flex items-center justify-center">
+                          <Icon className="w-4 h-4 text-accent/60" />
+                        </div>
+                        <div>
+                          <p className="text-sm font-medium">{order.product.name}</p>
+                          <p className="text-xs text-text-tertiary">
+                            {order.product.brand}
+                            {order.product.size && ` · ${order.product.size}`}
+                            {order.product.color && ` · ${order.product.color}`}
+                          </p>
+                        </div>
                       </div>
-                      <div>
-                        <p className="text-sm font-medium">{order.product.name}</p>
-                        <p className="text-xs text-text-tertiary">
-                          {order.product.brand}
-                          {order.product.size && ` · ${order.product.size}`}
-                          {order.product.color && ` · ${order.product.color}`}
+                      <div className="text-right">
+                        <span className="inline-block px-2 py-0.5 rounded-md bg-accent/10 text-accent text-xs">
+                          {STATUS_LABELS[order.status] || order.status}
+                        </span>
+                        <p className="text-xs text-text-tertiary mt-1">
+                          {new Date(order.createdAt).toLocaleDateString("ru-RU")}
                         </p>
                       </div>
                     </div>
-                    <div className="text-right">
-                      <span className="inline-block px-2 py-0.5 rounded-md bg-accent/10 text-accent text-xs">
-                        {STATUS_LABELS[order.status] || order.status}
-                      </span>
-                      <p className="text-xs text-text-tertiary mt-1">
-                        {new Date(order.createdAt).toLocaleDateString("ru-RU")}
+
+                    {order.trackingNumber && (
+                      <p className="text-xs text-text-secondary">
+                        Трек: <span className="text-white">{order.trackingNumber}</span>
                       </p>
-                    </div>
+                    )}
+                    {order.address && (
+                      <p className="text-xs text-text-tertiary">
+                        {order.city}, {order.address}
+                      </p>
+                    )}
                   </div>
-
-                  {/* Tracking */}
-                  {order.trackingNumber && (
-                    <p className="text-xs text-text-secondary mb-2">
-                      Трек: <span className="text-white">{order.trackingNumber}</span>
-                    </p>
-                  )}
-
-                  {/* Delivery info */}
-                  {order.address && (
-                    <p className="text-xs text-text-tertiary mb-2">
-                      {order.city}, {order.address}
-                    </p>
-                  )}
-
-                  {/* Claim form */}
-                  {order.status === "ITEM_WON" && (
-                    <>
-                      {claimingId === order.id ? (
-                        <form
-                          onSubmit={(e) => handleClaim(e, order.id)}
-                          className="mt-4 space-y-3 border-t border-border pt-4"
-                        >
-                          <p className="text-sm font-medium mb-2">
-                            Данные для доставки
-                          </p>
-                          <input name="fullName" required className="input" placeholder="ФИО получателя" />
-                          <input name="phone" required className="input" placeholder="Телефон" />
-                          <input name="city" required className="input" placeholder="Город" />
-                          <input name="address" required className="input" placeholder="Адрес / пункт выдачи" />
-                          <div className="flex gap-2">
-                            <button type="submit" className="btn-accent text-sm py-2">
-                              Оформить
-                            </button>
-                            <button
-                              type="button"
-                              onClick={() => setClaimingId(null)}
-                              className="btn-ghost text-sm py-2"
-                            >
-                              Отмена
-                            </button>
-                          </div>
-                        </form>
-                      ) : (
-                        <button
-                          onClick={() => setClaimingId(order.id)}
-                          className="btn-accent text-sm py-2 mt-2"
-                        >
-                          Оформить получение
-                        </button>
-                      )}
-                    </>
-                  )}
-                </div>
-              );
-            })}
+                );
+              })}
           </div>
         )}
       </div>

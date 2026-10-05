@@ -4,6 +4,7 @@ import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
 import { Search, User, ShoppingBag, Menu, X, LogOut, Settings } from "lucide-react";
+import { BalanceBadge } from "@/components/layout/balance-badge";
 
 const NAV = [
   { href: "/#cat", label: "Кейсы" },
@@ -47,6 +48,7 @@ export function Header() {
 
           {status === "authenticated" ? (
             <>
+              <BalanceBadge />
               {isAdmin && (
                 <Link href="/admin" aria-label="Админка">
                   <Settings size={18} strokeWidth={1.5} />

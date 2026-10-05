@@ -19,8 +19,17 @@ export async function GET(req: Request) {
       orderBy: { createdAt: "desc" },
       include: {
         product: {
-          select: { name: true, brand: true, price: true, size: true, color: true },
+          select: {
+            id: true,
+            name: true,
+            brand: true,
+            price: true,
+            size: true,
+            color: true,
+            images: true,
+          },
         },
+        case: { select: { name: true } },
       },
     });
     return NextResponse.json({ orders });

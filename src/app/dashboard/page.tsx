@@ -3,6 +3,9 @@ import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/utils";
 import Link from "next/link";
 import { Package, History, Truck, Wallet } from "lucide-react";
+import { Inventory } from "@/components/dashboard/inventory";
+
+export const dynamic = "force-dynamic";
 
 export const metadata = { title: "Личный кабинет — DRIPCASES" };
 
@@ -108,51 +111,8 @@ export default async function DashboardPage() {
           </Link>
         </div>
 
-        {/* Recent openings */}
-        <div>
-          <h2 className="font-display font-semibold text-lg mb-4">
-            Последние открытия
-          </h2>
-          {recentOpenings.length === 0 ? (
-            <div className="rounded-xl border border-border bg-bg-card p-8 text-center">
-              <p className="text-text-secondary text-sm">
-                Ты ещё не открывал кейсы
-              </p>
-              <Link href="/cases" className="btn-accent mt-4 inline-flex">
-                Открыть первый кейс
-              </Link>
-            </div>
-          ) : (
-            <div className="space-y-2">
-              {recentOpenings.map((o) => (
-                <div
-                  key={o.id}
-                  className="rounded-lg border border-border bg-bg-card p-4 flex items-center justify-between"
-                >
-                  <div className="flex items-center gap-3">
-                    <div className="w-10 h-10 rounded-lg bg-bg-elevated flex items-center justify-center">
-                      <Package className="w-4 h-4 text-accent/60" />
-                    </div>
-                    <div>
-                      <p className="text-sm font-medium">{o.product.name}</p>
-                      <p className="text-xs text-text-tertiary">
-                        Кейс {o.case.name} — {formatPrice(o.cost)}
-                      </p>
-                    </div>
-                  </div>
-                  <div className="text-right">
-                    <p className="text-sm text-accent font-medium">
-                      {formatPrice(o.product.price)}
-                    </p>
-                    <p className="text-xs text-text-tertiary">
-                      {new Date(o.createdAt).toLocaleDateString("ru-RU")}
-                    </p>
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
-        </div>
+        {/* Инвентарь: выпавшие вещи, продать/забрать, оформление */}
+        <Inventory />
       </div>
     </div>
   );
