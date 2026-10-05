@@ -77,8 +77,7 @@ export function OpenCaseProvider({ children }: { children: React.ReactNode }) {
   const [results, setResults] = useState<OpenResultProduct[]>([]);
   const [errMsg, setErrMsg] = useState("");
 
-  const stripRef = useRef<HTMLDivElement>(null);
-  const stripWRef = useRef<HTMLDivElement>(null);
+  const stripRefs = useRef<(HTMLDivElement | null)[]>([]);
   const spinningRef = useRef(false);
   const timerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
 
@@ -95,32 +94,33 @@ export function OpenCaseProvider({ children }: { children: React.ReactNode }) {
     []
   );
 
-  const animate = useCallback(
-    (c: ClientCase, winner: ClientCaseItem, spinMs: number, done: () => void) => {
-      const strip = stripRef.current;
-      const view = stripWRef.current?.offsetWidth ?? 600;
-      if (!strip) {
-        done();
-        return;
-      }
-      const pool = c.items.length ? c.items : [winner];
-      let html = "";
-      for (let i = 0; i < TOTAL; i++) {
-        const it = i === WIN_AT ? winner : pool[Math.floor(Math.random() * pool.length)];
-        html += slotHTML(it);
-      }
-      strip.innerHTML = html;
-      strip.style.transition = "none";
-      strip.style.transform = "translateX(0)";
-      const jitter = (Math.random() * 0.6 - 0.3) * SLOT_W;
-      const target = -(WIN_AT * SLOT_W + SLOT_W / 2 - view / 2 + jitter);
-      requestAnimationFrame(() =>
-        requestAnimationFrame(() => {
-          strip.style.transition = `transform ${spinMs / 1000}s cubic-bezier(.12,.72,.08,1)`;
-          strip.style.transform = `translateX(${target}px)`;
-        })
-      );
-      timerRef.current = setTimeout(done, spinMs + 120);
+  const animateAll = useCallback(
+    (c: ClientCase, winners: ClientCaseItem[], spinMs: number, done: () => void) => {
+      const pool = c.items.length ? c.items : winners;
+      winners.forEach((winner, idx) => {
+        const strip = stripRefs.current[idx];
+        if (!strip) return;
+        const view = strip.parentElement?.offsetWidth ?? 600;
+        let html = "";
+        for (let i = 0; i < TOTAL; i++) {
+          const it = i === WIN_AT ? winner : pool[Math.floor(Math.random() * pool.length)];
+          html += slotHTML(it);
+        }
+        strip.innerHTML = html;
+        strip.style.transition = "none";
+        strip.style.transform = "translateX(0)";
+        const jitter = (Math.random() * 0.6 - 0.3) * SLOT_W;
+        const target = -(WIN_AT * SLOT_W + SLOT_W / 2 - view / 2 + jitter);
+        requestAnimationFrame(() =>
+          requestAnimationFrame(() => {
+            setTimeout(() => {
+              strip.style.transition = `transform ${spinMs / 1000}s cubic-bezier(.12,.72,.08,1)`;
+              strip.style.transform = `translateX(${target}px)`;
+            }, idx * 90);
+          })
+        );
+      });
+      timerRef.current = setTimeout(done, spinMs + winners.length * 90 + 220);
     },
     []
   );
@@ -130,6 +130,7 @@ export function OpenCaseProvider({ children }: { children: React.ReactNode }) {
       spinningRef.current = true;
       setErrMsg("");
       setResults([]);
+      stripRefs.current = [];
       setPhase("spinning");
 
       try {
@@ -159,15 +160,18 @@ export function OpenCaseProvider({ children }: { children: React.ReactNode }) {
 
         const res = (data as any).results as OpenResultProduct[];
         refreshBalance();
+        setResults(res);
 
-        const firstWinner = itemFor(c, res[0].id);
+        const winners = res.map((p) => itemFor(c, p.id));
         const spinMs = isFast ? 1400 : 5200;
 
-        animate(c, firstWinner, spinMs, () => {
-          spinningRef.current = false;
-          setResults(res);
-          setPhase("won");
-        });
+        // ждём, пока N полос отрендерятся, затем крутим каждую к своему дропу
+        requestAnimationFrame(() =>
+          animateAll(c, winners, spinMs, () => {
+            spinningRef.current = false;
+            setPhase("won");
+          })
+        );
       } catch {
         spinningRef.current = false;
         setErrMsg("Ошибка сети");
@@ -175,7 +179,7 @@ export function OpenCaseProvider({ children }: { children: React.ReactNode }) {
         toast.error("Ошибка сети");
       }
     },
-    [animate, itemFor, router]
+    [animateAll, itemFor, router]
   );
 
   const openCase = useCallback(
@@ -204,6 +208,10 @@ export function OpenCaseProvider({ children }: { children: React.ReactNode }) {
   }, []);
 
   const totalCost = current ? current.price * count : 0;
+  const showStrips = phase === "spinning" || phase === "won";
+  // во время кручения знаем count; на результате — сколько реально выпало
+  const rows = phase === "won" ? results.length || count : count;
+  const multi = rows > 1;
 
   return (
     <Ctx.Provider value={{ openCase }}>
@@ -223,7 +231,7 @@ export function OpenCaseProvider({ children }: { children: React.ReactNode }) {
           <div className="rl-h">
             <p>
               {phase === "won"
-                ? results.length > 1
+                ? multi
                   ? "ТВОЙ ДРОП"
                   : "ТЕБЕ ВЫПАЛО"
                 : phase === "error"
@@ -271,69 +279,48 @@ export function OpenCaseProvider({ children }: { children: React.ReactNode }) {
                 </div>
               </div>
 
-              <button
-                className="bgo setup-go"
-                onClick={() => run(current, count, fast)}
-              >
+              <button className="bgo setup-go" onClick={() => run(current, count, fast)}>
                 Крутить за {formatPrice(totalCost)}
               </button>
             </div>
           )}
 
-          {/* --- STRIP (spin) --- */}
-          {(phase === "spinning" || (phase === "won" && results.length === 1)) && (
-            <div className="strip-w" ref={stripWRef}>
-              <div className="ptr" />
-              <div className="strip" ref={stripRef} />
+          {/* --- ПОЛОСЫ-РУЛЕТКИ (по одной на каждый дроп) --- */}
+          {showStrips && (
+            <div className={multi ? "rolls" : ""}>
+              {Array.from({ length: rows }).map((_, i) => (
+                <div key={i} className={`strip-w${multi ? " multi" : ""}`}>
+                  <div className="ptr" />
+                  <div
+                    className="strip"
+                    ref={(el) => {
+                      stripRefs.current[i] = el;
+                    }}
+                  />
+                </div>
+              ))}
             </div>
           )}
 
-          {/* --- WON --- */}
+          {/* --- РЕЗУЛЬТАТ / КНОПКИ --- */}
           <div className="rl-f">
-            {phase === "won" && results.length === 1 && (
+            {phase === "won" && results.length === 1 && current && (
               <WonSingle
                 product={results[0]}
-                item={current ? itemFor(current, results[0].id) : null}
+                item={itemFor(current, results[0].id)}
                 onAgain={() => setPhase("setup")}
                 onClose={close}
               />
             )}
 
-            {phase === "won" && results.length > 1 && current && (
-              <div className="won" style={{ width: "100%" }}>
-                <div className="drop-grid">
-                  {results.map((p, i) => {
-                    const r = rarityOf(itemFor(current, p.id).share);
-                    return (
-                      <div
-                        key={i}
-                        className="drop-cell"
-                        style={{ borderColor: r.color }}
-                      >
-                        <div className="drop-ic">
-                          {p.images?.[0] ? (
-                            // eslint-disable-next-line @next/next/no-img-element
-                            <img src={p.images[0]} alt={p.name} />
-                          ) : (
-                            <span
-                              dangerouslySetInnerHTML={{ __html: boxIcon(26, r.color) }}
-                            />
-                          )}
-                        </div>
-                        <b>{p.name}</b>
-                        <span style={{ color: r.color }}>{formatPrice(p.price)}</span>
-                      </div>
-                    );
-                  })}
-                </div>
-                <div className="wbtns">
-                  <button className="bgo" onClick={() => setPhase("setup")}>
-                    Открыть ещё
-                  </button>
-                  <Link className="bg-" href="/dashboard" onClick={close}>
-                    В профиль
-                  </Link>
-                </div>
+            {phase === "won" && results.length > 1 && (
+              <div className="wbtns">
+                <button className="bgo" onClick={() => setPhase("setup")}>
+                  Открыть ещё
+                </button>
+                <Link className="bg-" href="/dashboard" onClick={close}>
+                  В профиль
+                </Link>
               </div>
             )}
 

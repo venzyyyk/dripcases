@@ -1525,3 +1525,33 @@
     transform: none;
   }
 }
+
+/* ---------- multi-roll (N полос при мультиоткрытии) ---------- */
+.rolls {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  max-height: 64vh;
+  overflow-y: auto;
+  padding-right: 4px;
+}
+.strip-w.multi {
+  height: 64px;
+}
+.strip-w.multi .sl {
+  gap: 3px;
+}
+.strip-w.multi .sl .ico {
+  width: 30px;
+  height: 30px;
+  border-radius: 7px;
+}
+.strip-w.multi .sl b {
+  font-size: 8.5px;
+  padding: 0 4px;
+}
+.strip-w.multi .ptr::before,
+.strip-w.multi .ptr::after {
+  border-left-width: 5px;
+  border-right-width: 5px;
+}
