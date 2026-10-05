@@ -3,6 +3,7 @@ import { prisma } from "@/lib/prisma";
 import { Hero } from "@/components/layout/hero";
 import { CaseCard } from "@/components/cases/case-card";
 import { ArrowRight, Star, Truck, ShieldCheck, Flame } from "lucide-react";
+export const dynamic = "force-dynamic";
 
 const WARM_CASES = new Set(["PREMIUM", "SUMMER"]);
 

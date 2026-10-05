@@ -4,6 +4,7 @@ import { formatPrice } from "@/lib/utils";
 import { CaseCard } from "@/components/cases/case-card";
 
 export const metadata = { title: "Кейсы — DRIPCASES" };
+export const dynamic = "force-dynamic";
 
 const WARM = new Set(["PREMIUM", "SUMMER"]);
 
