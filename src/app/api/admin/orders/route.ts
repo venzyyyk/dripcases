@@ -29,7 +29,6 @@ export async function GET(req: Request) {
             images: true,
           },
         },
-        case: { select: { name: true } },
       },
     });
     return NextResponse.json({ orders });
