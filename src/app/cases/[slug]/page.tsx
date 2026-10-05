@@ -2,11 +2,11 @@ import { notFound } from "next/navigation";
 import { prisma } from "@/lib/prisma";
 import { formatPrice } from "@/lib/utils";
 import { getSession } from "@/lib/session";
-import { CaseOpenButton } from "@/components/cases/case-open-button";
+import { mapCase, caseItemsInclude } from "@/lib/case-mapper";
+import { rarityOf } from "@/lib/rarity";
 import { Vitrine } from "@/components/cases/vitrine";
-import Image from "next/image";
-
-const WARM = new Set(["PREMIUM", "SUMMER"]);
+import { OpenButton } from "@/components/cases/open-button";
+import { OpenCaseProvider } from "@/components/cases/open-case-provider";
 
 export async function generateMetadata({ params }: { params: { slug: string } }) {
   const c = await prisma.case.findUnique({ where: { slug: params.slug } });
@@ -21,25 +21,7 @@ export default async function CaseDetailPage({
 }) {
   const caseData = await prisma.case.findUnique({
     where: { slug: params.slug, isActive: true },
-    include: {
-      items: {
-        include: {
-          product: {
-            select: {
-              id: true,
-              name: true,
-              brand: true,
-              images: true,
-              price: true,
-              size: true,
-              color: true,
-              stock: true,
-            },
-          },
-        },
-        orderBy: { dropChance: "desc" },
-      },
-    },
+    include: caseItemsInclude,
   });
 
   if (!caseData) notFound();
@@ -54,117 +36,137 @@ export default async function CaseDetailPage({
     userBalance = user?.balance || 0;
   }
 
+  const client = mapCase(caseData);
   const canAfford = userBalance >= caseData.price;
-  const allInStock = caseData.items.some((i) => i.product.stock > 0);
 
   return (
-    <div className="min-h-screen pt-24 pb-16 px-4 sm:px-6">
-      <div className="max-w-5xl mx-auto">
-        {/* Case header */}
-        <div className="grid lg:grid-cols-2 gap-10 mb-16">
-          {/* Витрина */}
-          <div className="relative aspect-[4/5]">
+    <OpenCaseProvider>
+      <section className="hero" style={{ minHeight: "auto" }}>
+        <div className="aur aur1" />
+        <div className="dc-wrap hgrid" style={{ paddingTop: 120 }}>
+          <div className="hr">
+            <div className="stage">
+              <Vitrine label={client.name} warm={client.warm} variant="hero" />
+            </div>
+          </div>
+
+          <div style={{ display: "flex", flexDirection: "column", justifyContent: "center" }}>
             {caseData.tag && (
-              <span className="absolute top-4 left-4 z-20 rounded-md bg-white/[0.07] border border-white/15 backdrop-blur-sm px-2.5 py-1 text-[10px] text-white/85">
+              <span className="pill" style={{ alignSelf: "flex-start" }}>
+                <i />
                 {caseData.tag}
               </span>
             )}
-            <Vitrine
-              image={caseData.image}
-              label={caseData.name}
-              warm={WARM.has(caseData.name)}
-              variant="hero"
-              priority
-            />
-          </div>
-
-          {/* Info + open */}
-          <div className="flex flex-col justify-center">
-            <h1 className="font-display font-bold text-3xl mb-2">Кейс {caseData.name}</h1>
-            <p className="text-text-secondary mb-6">{caseData.description}</p>
-
-            <div className="flex items-baseline gap-2 mb-2">
-              <span className="text-3xl font-display font-bold">
-                {formatPrice(caseData.price)}
-              </span>
-              <span className="text-text-tertiary text-sm">за открытие</span>
-            </div>
-
-            {session?.user ? (
-              <div className="mb-6">
-                <p className="text-sm text-text-secondary">
-                  Твой баланс:{" "}
-                  <span className={canAfford ? "text-green-400" : "text-red-400"}>
-                    {formatPrice(userBalance)}
-                  </span>
-                </p>
-              </div>
-            ) : (
-              <p className="text-sm text-text-secondary mb-6">
-                Войди, чтобы открыть кейс
-              </p>
+            <h1 className="dsp" style={{ marginTop: 20 }}>
+              {caseData.name}
+            </h1>
+            {caseData.description && (
+              <p className="lede">{caseData.description}</p>
             )}
 
-            <CaseOpenButton
-              caseId={caseData.id}
-              caseSlug={caseData.slug}
-              price={caseData.price}
-              canAfford={canAfford}
-              isLoggedIn={!!session?.user}
-              inStock={allInStock}
-            />
+            <div style={{ display: "flex", alignItems: "baseline", gap: 8, marginTop: 24 }}>
+              <span className="dsp" style={{ fontSize: 30, fontWeight: 700 }}>
+                {formatPrice(caseData.price)}
+              </span>
+              <span style={{ color: "var(--t3)", fontSize: 13 }}>за открытие</span>
+            </div>
 
-            <p className="text-xs text-text-tertiary mt-4">
-              {caseData.items.length} товаров в кейсе
+            <p style={{ fontSize: 13, color: "var(--t2)", margin: "10px 0 24px" }}>
+              {session?.user ? (
+                <>
+                  Твой баланс:{" "}
+                  <span style={{ color: canAfford ? "#4ade80" : "#f87171" }}>
+                    {formatPrice(userBalance)}
+                  </span>
+                </>
+              ) : (
+                "Войди, чтобы открыть кейс"
+              )}
+            </p>
+
+            <OpenButton data={client} />
+
+            <p style={{ fontSize: 12, color: "var(--t3)", marginTop: 16 }}>
+              {client.items.length} товаров в кейсе
             </p>
           </div>
         </div>
+      </section>
 
-        {/* Items list */}
-        <div>
-          <h2 className="font-display font-semibold text-xl mb-6">
-            Содержимое кейса
+      {/* Содержимое */}
+      <section className="sec">
+        <div className="dc-wrap sp">
+          <p className="eb">СОДЕРЖИМОЕ КЕЙСА</p>
+          <h2 className="dsp" style={{ marginBottom: 34 }}>
+            Что можно выбить
           </h2>
-          <div className="grid sm:grid-cols-2 lg:grid-cols-3 gap-4">
-            {caseData.items.map((item) => (
-              <div
-                key={item.id}
-                className="rounded-lg border border-border bg-bg-card p-4 flex gap-4"
-              >
-                <div className="w-16 h-16 rounded-lg bg-bg-elevated shrink-0 overflow-hidden relative">
-                  {item.product.images[0] ? (
-                    <Image
-                      src={item.product.images[0]}
-                      alt={item.product.name}
-                      fill
-                      sizes="64px"
-                      className="object-contain p-1.5"
-                    />
-                  ) : (
-                    <span className="absolute inset-0 flex items-center justify-center text-text-tertiary text-[10px]">
-                      нет фото
-                    </span>
-                  )}
-                </div>
-                <div className="min-w-0 flex-1">
-                  <p className="text-sm font-medium truncate">{item.product.name}</p>
-                  {item.product.brand && (
-                    <p className="text-xs text-text-tertiary">{item.product.brand}</p>
-                  )}
-                  <div className="flex items-center justify-between mt-2">
-                    <span className="text-xs text-text-secondary">
-                      {formatPrice(item.product.price)}
-                    </span>
-                    <span className="text-xs text-accent font-medium">
-                      {item.dropChance}%
-                    </span>
+
+          <div
+            style={{
+              display: "grid",
+              gridTemplateColumns: "repeat(auto-fill, minmax(220px, 1fr))",
+              gap: 14,
+            }}
+          >
+            {client.items.map((item) => {
+              const r = rarityOf(item.share);
+              return (
+                <div
+                  key={item.productId}
+                  style={{
+                    display: "flex",
+                    gap: 14,
+                    padding: 14,
+                    borderRadius: 12,
+                    border: "1px solid var(--line)",
+                    background: "var(--card)",
+                    borderLeft: `3px solid ${r.color}`,
+                  }}
+                >
+                  <div
+                    style={{
+                      width: 56,
+                      height: 56,
+                      borderRadius: 10,
+                      background: "var(--elev)",
+                      flexShrink: 0,
+                      overflow: "hidden",
+                      display: "flex",
+                      alignItems: "center",
+                      justifyContent: "center",
+                    }}
+                  >
+                    {item.images[0] ? (
+                      // eslint-disable-next-line @next/next/no-img-element
+                      <img
+                        src={item.images[0]}
+                        alt={item.name}
+                        style={{ width: "100%", height: "100%", objectFit: "cover" }}
+                      />
+                    ) : (
+                      <span style={{ fontSize: 10, color: "var(--t3)" }}>нет фото</span>
+                    )}
+                  </div>
+                  <div style={{ minWidth: 0, flex: 1 }}>
+                    <p style={{ fontSize: 13, fontWeight: 500 }}>{item.name}</p>
+                    {item.brand && (
+                      <p style={{ fontSize: 11, color: "var(--t3)" }}>{item.brand}</p>
+                    )}
+                    <div style={{ display: "flex", justifyContent: "space-between", marginTop: 8 }}>
+                      <span style={{ fontSize: 12, color: "var(--t2)" }}>
+                        {formatPrice(item.price)}
+                      </span>
+                      <span style={{ fontSize: 11, color: r.color, fontWeight: 600 }}>
+                        {r.key}
+                      </span>
+                    </div>
                   </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </div>
         </div>
-      </div>
-    </div>
+      </section>
+    </OpenCaseProvider>
   );
 }
