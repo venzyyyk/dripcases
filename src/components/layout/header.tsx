@@ -3,7 +3,7 @@
 import Link from "next/link";
 import { useSession, signOut } from "next-auth/react";
 import { useEffect, useState } from "react";
-import { Search, User, ShoppingBag, Menu, X, LogOut, Settings } from "lucide-react";
+import { Search, User, ShoppingBag, Menu, X, LogOut, Settings, Store } from "lucide-react";
 import { BalanceBadge } from "@/components/layout/balance-badge";
 
 const NAV = [
@@ -17,7 +17,9 @@ export function Header() {
   const [open, setOpen] = useState(false);
   const [scrolled, setScrolled] = useState(false);
 
-  const isAdmin = (session?.user as any)?.role === "ADMIN";
+  const role = (session?.user as any)?.role;
+  const isAdmin = role === "ADMIN";
+  const isSupplier = role === "SUPPLIER";
 
   useEffect(() => {
     const onScroll = () => setScrolled(window.scrollY > 12);
@@ -49,6 +51,11 @@ export function Header() {
           {status === "authenticated" ? (
             <>
               <BalanceBadge />
+              {isSupplier && (
+                <Link href="/supplier" aria-label="Кабинет поставщика">
+                  <Store size={18} strokeWidth={1.5} />
+                </Link>
+              )}
               {isAdmin && (
                 <Link href="/admin" aria-label="Админка">
                   <Settings size={18} strokeWidth={1.5} />
@@ -99,6 +106,11 @@ export function Header() {
             <Link href="/dashboard" onClick={() => setOpen(false)}>
               Личный кабинет
             </Link>
+            {isSupplier && (
+              <Link href="/supplier" onClick={() => setOpen(false)}>
+                Кабинет поставщика
+              </Link>
+            )}
             {isAdmin && (
               <Link href="/admin" onClick={() => setOpen(false)}>
                 Админка

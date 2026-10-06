@@ -10,6 +10,7 @@ datasource db {
 enum Role {
   USER
   ADMIN
+  SUPPLIER
 }
 
 enum OrderStatus {
@@ -52,6 +53,7 @@ model User {
   caseOpenings   CaseOpening[]
   orders         Order[]
   transactions   Transaction[]
+  suppliedProducts Product[]   @relation("SupplierProducts")
 
   @@map("users")
 }
@@ -89,6 +91,9 @@ model Product {
   isActive    Boolean    @default(true)
   createdAt   DateTime   @default(now())
   updatedAt   DateTime   @updatedAt
+
+  supplierId  String?
+  supplier    User?      @relation("SupplierProducts", fields: [supplierId], references: [id])
 
   caseItems   CaseItem[]
   openings    CaseOpening[]

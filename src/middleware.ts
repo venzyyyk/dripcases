@@ -11,6 +11,14 @@ export default withAuth(
       return NextResponse.redirect(new URL("/", req.url));
     }
 
+    if (
+      path.startsWith("/supplier") &&
+      token?.role !== "SUPPLIER" &&
+      token?.role !== "ADMIN"
+    ) {
+      return NextResponse.redirect(new URL("/", req.url));
+    }
+
     return NextResponse.next();
   },
   {
@@ -23,5 +31,5 @@ export default withAuth(
 export const config = {
   // /api/* сюда не попадает: роуты сами проверяют сессию.
   // Раздача картинок (/api/uploads/*) должна остаться публичной.
-  matcher: ["/dashboard/:path*", "/admin/:path*"],
+  matcher: ["/dashboard/:path*", "/admin/:path*", "/supplier/:path*"],
 };

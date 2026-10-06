@@ -26,7 +26,7 @@ export async function POST(req: Request) {
   }
 
   const body = await req.json();
-  const { name, description, brand, size, color, price, sku, stock, images } = body;
+  const { name, description, brand, size, color, price, sku, stock, images, supplierId } = body;
 
   if (!name || !price) {
     return NextResponse.json({ error: "Укажите название и цену" }, { status: 400 });
@@ -50,6 +50,7 @@ export async function POST(req: Request) {
       sku: sku || null,
       stock: stock || 0,
       images: images || [],
+      supplierId: supplierId || null,
     },
   });
 

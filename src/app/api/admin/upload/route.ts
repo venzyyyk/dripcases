@@ -16,7 +16,8 @@ export const runtime = "nodejs";
 
 export async function POST(req: Request) {
   const session = await getServerSession(authOptions);
-  if ((session?.user as any)?.role !== "ADMIN") {
+  const role = (session?.user as any)?.role;
+  if (role !== "ADMIN" && role !== "SUPPLIER") {
     return NextResponse.json({ error: "Forbidden" }, { status: 403 });
   }
 

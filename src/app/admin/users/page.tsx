@@ -56,6 +56,20 @@ export default function AdminUsersPage() {
     }
   }
 
+  async function setRole(userId: string, role: string) {
+    const res = await fetch("/api/admin/users", {
+      method: "PATCH",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ action: "setRole", userId, role }),
+    });
+    if (res.ok) {
+      toast.success("Роль обновлена");
+      fetchUsers();
+    } else {
+      toast.error("Ошибка");
+    }
+  }
+
   async function toggleBlock(userId: string, current: boolean) {
     await fetch("/api/admin/users", {
       method: "PATCH",
@@ -94,11 +108,23 @@ export default function AdminUsersPage() {
                 <td className="px-4 py-3 text-center">{u._count.caseOpenings}</td>
                 <td className="px-4 py-3 text-center">{u._count.orders}</td>
                 <td className="px-4 py-3 text-center">
-                  {u.isBlocked ? (
-                    <span className="text-xs text-red-400">Заблокирован</span>
-                  ) : (
-                    <span className="text-xs text-green-400">Активен</span>
-                  )}
+                  <div className="flex flex-col items-center gap-1.5">
+                    {u.isBlocked ? (
+                      <span className="text-xs text-red-400">Заблокирован</span>
+                    ) : (
+                      <span className="text-xs text-green-400">Активен</span>
+                    )}
+                    <select
+                      value={u.role}
+                      onChange={(e) => setRole(u.id, e.target.value)}
+                      className="input w-28 py-1 text-xs"
+                      title="Роль"
+                    >
+                      <option value="USER">Покупатель</option>
+                      <option value="SUPPLIER">Поставщик</option>
+                      <option value="ADMIN">Админ</option>
+                    </select>
+                  </div>
                 </td>
                 <td className="px-4 py-3 text-right">
                   <div className="flex items-center justify-end gap-2">

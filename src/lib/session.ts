@@ -38,3 +38,9 @@ export async function requireAdmin() {
   if (!user || user.role !== "ADMIN") redirect("/");
   return user;
 }
+
+export async function requireSupplier() {
+  const user = await getCurrentUser();
+  if (!user || (user.role !== "SUPPLIER" && user.role !== "ADMIN")) redirect("/");
+  return user;
+}

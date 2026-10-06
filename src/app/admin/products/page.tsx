@@ -26,10 +26,21 @@ export default function AdminProductsPage() {
   const [loading, setLoading] = useState(true);
   const [showCreate, setShowCreate] = useState(false);
   const [newImage, setNewImage] = useState<string | null>(null);
+  const [suppliers, setSuppliers] = useState<{ id: string; name: string | null; email: string }[]>([]);
+  const [supplierId, setSupplierId] = useState("");
 
   useEffect(() => {
     fetchProducts();
+    fetchSuppliers();
   }, []);
+
+  async function fetchSuppliers() {
+    try {
+      const res = await fetch("/api/admin/users");
+      const data = await res.json();
+      setSuppliers((data.users || []).filter((u: any) => u.role === "SUPPLIER"));
+    } catch {}
+  }
 
   async function fetchProducts() {
     const res = await fetch("/api/admin/products");
@@ -51,6 +62,7 @@ export default function AdminProductsPage() {
       sku: fd.get("sku") || null,
       stock: parseInt(fd.get("stock") as string) || 0,
       images: newImage ? [newImage] : [],
+      supplierId: supplierId || null,
     };
 
     const res = await fetch("/api/admin/products", {
@@ -63,6 +75,7 @@ export default function AdminProductsPage() {
       toast.success("Товар создан");
       setShowCreate(false);
       setNewImage(null);
+      setSupplierId("");
       fetchProducts();
     } else {
       const err = await res.json();
@@ -128,6 +141,21 @@ export default function AdminProductsPage() {
           <div>
             <label className="label">Артикул (SKU)</label>
             <input name="sku" className="input" />
+          </div>
+          <div>
+            <label className="label">Поставщик</label>
+            <select
+              value={supplierId}
+              onChange={(e) => setSupplierId(e.target.value)}
+              className="input"
+            >
+              <option value="">— без поставщика —</option>
+              {suppliers.map((u) => (
+                <option key={u.id} value={u.id}>
+                  {u.name || u.email}
+                </option>
+              ))}
+            </select>
           </div>
           <div className="max-w-xs">
             <ImageUpload

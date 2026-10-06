@@ -62,6 +62,15 @@ export async function PATCH(req: Request) {
     return NextResponse.json({ ok: true });
   }
 
+  if (action === "setRole") {
+    const { role } = body;
+    if (!["USER", "ADMIN", "SUPPLIER"].includes(role)) {
+      return NextResponse.json({ error: "Неизвестная роль" }, { status: 400 });
+    }
+    await prisma.user.update({ where: { id: userId }, data: { role } });
+    return NextResponse.json({ ok: true });
+  }
+
   if (action === "toggleBlock") {
     const { isBlocked } = body;
     await prisma.user.update({
